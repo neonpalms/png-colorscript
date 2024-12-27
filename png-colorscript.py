@@ -1,39 +1,32 @@
 # /usr/bin/env python
 
+import random
 from PIL import Image
-import numpy as np
 from pathlib import Path
 
 CONFIG_DIR: Path = Path("~/.config/png-colorscript").expanduser()
-IMAGES_DIR: Path = CONFIG_DIR.joinpath("pngs")
+PNGS_DIR: Path = CONFIG_DIR.joinpath("pngs")
+
+ALL_PNGS_FOUND_IN_CONFIG: list[str] = []
 
 
 def verify_config() -> None:
-    """Check to see: 1. if the config dir exists and 2. if there are any PNGs in said folder."""
-    global IMAGES_DIR
+    """
+    Check to see: 1. if the config dir exists and 2. if there are any PNGs in said folder.
+    Save all of these PNG filenames to the global PNGs list.
+    """
+    global PNGS_DIR, ALL_PNGS_FOUND_IN_CONFIG
     run_first_time_config() if not Path.exists(CONFIG_DIR) else None
 
     import os, os.path
 
-    if (
-        len(
-            [
-                filename
-                for filename in os.listdir(IMAGES_DIR)
-                if filename.endswith(".png")
-            ]
-        )
-        == 0
-    ):
-        print(f"There are no PNGs located in ${IMAGES_DIR}; go put some there, dingus.")
+    os.chdir(PNGS_DIR)
+    for filename in os.listdir("."):
+        ALL_PNGS_FOUND_IN_CONFIG.append(filename) if filename.endswith(".png") else None
+
+    if len(ALL_PNGS_FOUND_IN_CONFIG) == 0:
+        print(f"There are no PNGs located in ${PNGS_DIR}; go put some there, dingus.")
         exit(1)
-
-
-def rgb_to_colored_pixel(r: int, g: int, b: int) -> str:
-    """Returns a ▀ character preceded by an escape sequence that changes the rgb color of the terminal."""
-    ESC = "\x1b"
-    PXL = "▀"
-    return f"{ESC}[38;2;{r};{g};{b}m{PXL}"
 
 
 def reset_console_color():
@@ -41,39 +34,98 @@ def reset_console_color():
     print("\x1b[0m")
 
 
-def print_image_array_to_console(img: Image) -> None:
-    """Takes an array of pixels and prints a space for every alpha pixel and a colored character for every other pixel."""
-    # TODO Implement
-    raise NotImplementedError()
+class Color:
+    r: int
+    g: int
+    b: int
+    a: int
+
+    def __init__(self, rgba: list[int]):
+        self.r, self.g, self.b, self.a = rgba
+
+    def __str__(self):
+        return f"{self.r};{self.g};{self.b}"
 
 
-def get_random_image() -> Image:
-    """Returns a random image from the config directory."""
-    # TODO Implement
-    raise NotImplementedError()
+def print_png_to_console(png: Image) -> None:
+    """Prints a PNG image to the console using colored characters based on RGBA values."""
+    ALPHA_CUTOFF = 128  # Threshold below which alpha is considered fully transparent
+    ESC = "\x1b"
+    RES = "\x1b[0m"
+    TOP_PXL_CH = "▀"
+    BTM_PXL_CH = "▄"
+
+    out = ""  # The output string to be printed
+
+    for y in range(0, png.height, 2):  # Process two rows at a time (top and bottom)
+        for x in range(png.width):
+            # For every two rows, get the top & bottom pixel colors
+            top_color = Color(png.getpixel((x, y)))
+            btm_color = Color(png.getpixel((x, y + 1))) if y + 1 < png.height else None
+
+            # If both pixels are transparent, print a space
+            if top_color.a < ALPHA_CUTOFF and (
+                btm_color is None or btm_color.a < ALPHA_CUTOFF
+            ):
+                out += " "
+            else:
+                # Handle the bottom pixel first if it exists and is not transparent
+                if btm_color and btm_color.a >= ALPHA_CUTOFF:
+                    out += f"{ESC}[38;2;{btm_color}m"  # Set bottom pixel color
+                    if top_color.a >= ALPHA_CUTOFF:
+                        out += (
+                            f"{ESC}[48;2;{top_color}m"  # Set top pixel background color
+                        )
+                    out += BTM_PXL_CH
+                elif top_color.a >= ALPHA_CUTOFF:
+                    out += (
+                        f"{ESC}[38;2;{top_color}m" + TOP_PXL_CH
+                    )  # Set top pixel color and print character
+
+            out += RES  # Reset the color for the next pixel
+
+        out += "\n"  # Move to the next line after processing a row of pixels
+
+    print(out)
 
 
-def get_image_by_name(img_name: str) -> Image:
-    """Returns an image from the config directory by filename."""
-    # TODO Implement
-    print(img_name)
-    raise NotImplementedError()
+def print_random_image() -> None:
+    """Calls `print_image_array_to_console` with a random image from the PNGs directory."""
+    global ALL_PNGS_FOUND_IN_CONFIG
+    print_png_to_console(Image.open(random.choice(ALL_PNGS_FOUND_IN_CONFIG)))
 
 
-def get_random_image_from_names(img_names: list[str]) -> Image:
-    """Returns a random image from a string list of filenames."""
-    # TODO Implement
-    print(img_names)
-    raise NotImplementedError()
+def print_image_by_name(png_name: str) -> None:
+    """Calls `print_image_array_to_console` with an image from the PNGs directory by filename."""
+    check_png_exists(png_name)
+    print(print_png_to_console(Image.open(f"{png_name}.png")))
+
+
+def print_random_image_from_names(png_names: list[str]) -> None:
+    """Calls `print_image_array_to_console` with a random image from a string list of filenames in the PNGs directory."""
+    # Check to see that all of these names are actually in the PNGs directory
+    global ALL_PNGS_FOUND_IN_CONFIG, PNGS_DIR
+    for filename in png_names:
+        check_png_exists(filename)
+
+    print_png_to_console(Image.open(f"{random.choice(png_names)}.png"))
+
+
+def check_png_exists(png_filename):
+    """Checks to see if the specified PNG filename was located in the config dir. Will halt execution if it's not found."""
+    global ALL_PNGS_FOUND_IN_CONFIG, PNGS_DIR
+    if f"{png_filename}.png" not in ALL_PNGS_FOUND_IN_CONFIG:
+        print(f"Dude. '{png_filename}.png' isn't in {PNGS_DIR}. Stop it.")
+        exit(1)
 
 
 def run_first_time_config() -> None:
     """Initialize the program by creating a .config folder and a folder for images to go."""
-    global CONFIG_DIR, IMAGES_DIR
+    global CONFIG_DIR, PNGS_DIR
     print(f"Performing first-time set up ...")
     Path.mkdir(CONFIG_DIR)  # Make both directories since they don't exist
-    Path.mkdir(IMAGES_DIR)
-    print(f"Please put some PNGs to print in ${IMAGES_DIR} then run again!")
+    Path.mkdir(PNGS_DIR)
+    print(f"Please put some PNGs to print in ${PNGS_DIR} then run again!")
     exit(0)
 
 
@@ -118,23 +170,16 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.random:
-        get_random_image()
+        print_random_image()
     elif args.name:
-        get_image_by_name(args.name)
+        print_image_by_name(args.name[0])
     elif args.random_name:
         names = args.random_name[0].split(",")
-        get_random_image_from_names(names)
+        print_random_image_from_names(names)
     else:
         parser.print_help()
 
     reset_console_color()
-
-
-# region DEBUG CLEAR SCREEN BEFORE RUNNING ------------
-import os
-
-os.system("clear")  # ! DEBUG
-# endregion -------------------------------------------
 
 
 if __name__ == "__main__":

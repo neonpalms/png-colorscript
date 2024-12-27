@@ -11,7 +11,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "-r",
+                "-r"
             ]
         },
         {
@@ -21,8 +21,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "-rn",
-                "taillow,swellow,berry",
+                "-rn", "taillow (1),taillow (2)"
             ]
         },
         {
@@ -32,8 +31,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "-n",
-                "taillow",
+                "-n", "taillow"
             ]
         }
     ]
