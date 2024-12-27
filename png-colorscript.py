@@ -1,5 +1,6 @@
 # /usr/bin/env python
 
+import sys
 import random
 from PIL import Image
 from pathlib import Path
@@ -26,7 +27,7 @@ def verify_config() -> None:
 
     if len(ALL_PNGS_FOUND_IN_CONFIG) == 0:
         print(f"There are no PNGs located in ${PNGS_DIR}; go put some there, dingus.")
-        exit(1)
+        sys.exit(1)
 
 
 def reset_console_color():
@@ -111,12 +112,12 @@ def print_random_image_from_names(png_names: list[str]) -> None:
     print_png_to_console(Image.open(f"{random.choice(png_names)}.png"))
 
 
-def check_png_exists(png_filename):
+def check_png_exists(png_filename) -> None:
     """Checks to see if the specified PNG filename was located in the config dir. Will halt execution if it's not found."""
     global ALL_PNGS_FOUND_IN_CONFIG, PNGS_DIR
     if f"{png_filename}.png" not in ALL_PNGS_FOUND_IN_CONFIG:
         print(f"Dude. '{png_filename}.png' isn't in {PNGS_DIR}. Stop it.")
-        exit(1)
+        sys.exit(1)
 
 
 def run_first_time_config() -> None:
@@ -126,7 +127,7 @@ def run_first_time_config() -> None:
     Path.mkdir(CONFIG_DIR)  # Make both directories since they don't exist
     Path.mkdir(PNGS_DIR)
     print(f"Please put some PNGs to print in ${PNGS_DIR} then run again!")
-    exit(0)
+    sys.exit(0)
 
 
 def main() -> None:
