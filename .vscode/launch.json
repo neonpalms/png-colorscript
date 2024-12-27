@@ -31,7 +31,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "-n", "taillow"
+                "-n", "vivian"
             ]
         }
     ]

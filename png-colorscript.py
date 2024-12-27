@@ -99,7 +99,7 @@ def print_random_image() -> None:
 def print_image_by_name(png_name: str) -> None:
     """Calls `print_image_array_to_console` with an image from the PNGs directory by filename."""
     check_png_exists(png_name)
-    print(print_png_to_console(Image.open(f"{png_name}.png")))
+    print_png_to_console(Image.open(f"{png_name}.png"))
 
 
 def print_random_image_from_names(png_names: list[str]) -> None:
