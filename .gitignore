@@ -1,0 +1,7 @@
+# ignore bytecode files
+*.pyc
+__pycache__
+
+# ignore venv
+.venv
+

@@ -1,0 +1,15 @@
+altgraph==0.17.4
+asarPy==1.0.1
+attrs==24.3.0
+commentjson==0.9.0
+jsonschema==4.23.0
+jsonschema-specifications==2024.10.1
+lark-parser==0.7.8
+numpy==2.2.1
+packaging==24.2
+pillow==11.0.0
+pyinstaller==6.11.1
+pyinstaller-hooks-contrib==2024.10
+referencing==0.35.1
+rpds-py==0.22.3
+setuptools==75.6.0
