@@ -21,7 +21,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "-rn", "taillow (1),taillow (2)"
+                "-rn", "pikmin-blue,pikmin-red"
             ]
         },
         {
@@ -31,7 +31,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "-n", "vivian"
+                "-n", "pikmin-white"
             ]
         }
     ]

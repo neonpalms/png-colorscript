@@ -4,29 +4,37 @@ import sys
 import random
 from PIL import Image
 from pathlib import Path
+import configparser
 
-CONFIG_DIR: Path = Path("~/.config/png-colorscript").expanduser()
-PNGS_DIR: Path = CONFIG_DIR.joinpath("pngs")
+CONFIG_DIR: Path = Path("~/.config/png-colorscript/").expanduser()
+CONFIG_FILENM: str = "pngs.conf"
 
-ALL_PNGS_FOUND_IN_CONFIG: list[str] = []
+PNGS_PATH: Path = None
+ALL_PNGS_FOUND_IN_PATH: list[str] = []
 
 
-def verify_config() -> None:
+def load_config() -> None:
     """
-    Check to see: 1. if the config dir exists and 2. if there are any PNGs in said folder.
-    Save all of these PNG filenames to the global PNGs list.
+    Load the settings from the config file into the global constants.
     """
-    global PNGS_DIR, ALL_PNGS_FOUND_IN_CONFIG
-    run_first_time_config() if not Path.exists(CONFIG_DIR) else None
+    global CONFIG_DIR, CONFIG_FILENM, PNGS_PATH, ALL_PNGS_FOUND_IN_PATH
+    
+    config_path = CONFIG_DIR.joinpath(CONFIG_FILENM)
+    config = configparser.ConfigParser()
+    if (not Path.exists(CONFIG_DIR) or not Path.exists(config_path)):
+        run_first_time_config()
+    else:
+        config.read(config_path)
+        PNGS_PATH = Path(f"{config['DEFAULT'].get('PNGS_LOCATION')}").expanduser()
 
     import os, os.path
 
-    os.chdir(PNGS_DIR)
+    os.chdir(PNGS_PATH)
     for filename in os.listdir("."):
-        ALL_PNGS_FOUND_IN_CONFIG.append(filename) if filename.endswith(".png") else None
+        ALL_PNGS_FOUND_IN_PATH.append(filename) if filename.endswith(".png") else None
 
-    if len(ALL_PNGS_FOUND_IN_CONFIG) == 0:
-        print(f"There are no PNGs located in ${PNGS_DIR}; go put some there, dingus.")
+    if len(ALL_PNGS_FOUND_IN_PATH) == 0:
+        print(f"There are no PNGs located in ${PNGS_PATH}; go put some there, dingus.")
         sys.exit(1)
 
 
@@ -92,8 +100,8 @@ def print_png_to_console(png: Image) -> None:
 
 def print_random_image() -> None:
     """Calls `print_image_array_to_console` with a random image from the PNGs directory."""
-    global ALL_PNGS_FOUND_IN_CONFIG
-    print_png_to_console(Image.open(random.choice(ALL_PNGS_FOUND_IN_CONFIG)))
+    global ALL_PNGS_FOUND_IN_PATH
+    print_png_to_console(Image.open(random.choice(ALL_PNGS_FOUND_IN_PATH)))
 
 
 def print_image_by_name(png_name: str) -> None:
@@ -105,7 +113,7 @@ def print_image_by_name(png_name: str) -> None:
 def print_random_image_from_names(png_names: list[str]) -> None:
     """Calls `print_image_array_to_console` with a random image from a string list of filenames in the PNGs directory."""
     # Check to see that all of these names are actually in the PNGs directory
-    global ALL_PNGS_FOUND_IN_CONFIG, PNGS_DIR
+    global ALL_PNGS_FOUND_IN_PATH, PNGS_PATH
     for filename in png_names:
         check_png_exists(filename)
 
@@ -114,25 +122,32 @@ def print_random_image_from_names(png_names: list[str]) -> None:
 
 def check_png_exists(png_filename) -> None:
     """Checks to see if the specified PNG filename was located in the config dir. Will halt execution if it's not found."""
-    global ALL_PNGS_FOUND_IN_CONFIG, PNGS_DIR
-    if f"{png_filename}.png" not in ALL_PNGS_FOUND_IN_CONFIG:
-        print(f"Dude. '{png_filename}.png' isn't in {PNGS_DIR}. Stop it.")
+    global ALL_PNGS_FOUND_IN_PATH, PNGS_PATH
+    if f"{png_filename}.png" not in ALL_PNGS_FOUND_IN_PATH:
+        print(f"Dude. '{png_filename}.png' isn't in {PNGS_PATH}. Stop it.")
         sys.exit(1)
 
 
 def run_first_time_config() -> None:
-    """Initialize the program by creating a .config folder and a folder for images to go."""
-    global CONFIG_DIR, PNGS_DIR
+    """Initialize the program by creating a .config folder and a default .conf file."""
+    global CONFIG_DIR, CONFIG_FILENM
     print(f"Performing first-time set up ...")
-    Path.mkdir(CONFIG_DIR)  # Make both directories since they don't exist
-    Path.mkdir(PNGS_DIR)
-    print(f"Please put some PNGs to print in ${PNGS_DIR} then run again!")
+    
+    Path.mkdir(CONFIG_DIR, exist_ok=True)
+    config_path = CONFIG_DIR.joinpath(CONFIG_FILENM)
+
+    DEFAULT_PNGS_LOCATION = "~/Pictures/Sprites"
+    with open(config_path, "w") as file:
+        file.write(f"[DEFAULT]\nPNGS_LOCATION = {DEFAULT_PNGS_LOCATION}\n")
+    
+    print(f"'{config_path}' has been established with default PNGs location at '{DEFAULT_PNGS_LOCATION}'.")
+    print(f"Either go put some PNGs there and run this again or change the config file to make the program look for images somewhere else!")
     sys.exit(0)
 
 
 def main() -> None:
     """Entry point to the program."""
-    verify_config()
+    load_config()
 
     import argparse
 
