@@ -24,7 +24,7 @@ deactivate
 if [ -f "dist/$EXECUTABLE_NAME" ]; then
     mv "dist/$EXECUTABLE_NAME" "$INSTALL_DIR/"
     chmod +x "$INSTALL_DIR/$EXECUTABLE_NAME" # Ensure it's executable
-    echo "$EXECUTABLE_NAME has been installed to $INSTALL_DIR. You can now run it from the terminal."
+    echo "$EXECUTABLE_NAME has been installed to $INSTALL_DIR."
 else
     echo "Build failed: Executable not found in dist/."
     exit 1

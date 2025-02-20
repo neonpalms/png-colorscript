@@ -2,7 +2,7 @@
 *.pyc
 __pycache__
 
-# ignore venv
+# ignore virtual environment
 .venv
 
 # ignore build stuff

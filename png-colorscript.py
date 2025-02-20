@@ -1,44 +1,14 @@
 # /usr/bin/env python
 
 import sys
-import random
 from PIL import Image
 from pathlib import Path
-import configparser
 
-CONFIG_DIR: Path = Path("~/.config/png-colorscript/").expanduser()
-CONFIG_FILENM: str = "pngs.conf"
-
-PNGS_PATH: Path = None
 ALL_PNGS_FOUND_IN_PATH: list[str] = []
+PNGS_PATH: Path
 
 
-def load_config() -> None:
-    """
-    Load the settings from the config file into the global constants.
-    """
-    global CONFIG_DIR, CONFIG_FILENM, PNGS_PATH, ALL_PNGS_FOUND_IN_PATH
-    
-    config_path = CONFIG_DIR.joinpath(CONFIG_FILENM)
-    config = configparser.ConfigParser()
-    if (not Path.exists(CONFIG_DIR) or not Path.exists(config_path)):
-        run_first_time_config()
-    else:
-        config.read(config_path)
-        PNGS_PATH = Path(f"{config['DEFAULT'].get('PNGS_LOCATION')}").expanduser()
-
-    import os, os.path
-
-    os.chdir(PNGS_PATH)
-    for filename in os.listdir("."):
-        ALL_PNGS_FOUND_IN_PATH.append(filename) if filename.endswith(".png") else None
-
-    if len(ALL_PNGS_FOUND_IN_PATH) == 0:
-        print(f"There are no PNGs located in ${PNGS_PATH}; go put some there, dingus.")
-        sys.exit(1)
-
-
-def reset_console_color():
+def reset_console_color() -> None:
     """Resets the console color back to normal."""
     print("\x1b[0m")
 
@@ -54,6 +24,85 @@ class Color:
 
     def __str__(self):
         return f"{self.r};{self.g};{self.b}"
+
+
+def parse_args() -> None:
+    """Parse & return the arguments passed by the user."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="png-colorscripts",
+        description="CLI utility that prints out unicode images from PNGs located in a user-specified directory",
+        usage="png-colorscripts -l '[PATH_TO_PNGS]' [-r | -n 'filename' | -rn 'image1,image2,image3' ]",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,
+    )
+
+    parser.add_argument(
+        "-h", "--help", action="help", help="Show this help message and exit"
+    )
+    parser.add_argument(
+        "-l",
+        "--location",
+        type=Path,
+        required=True,
+        help="The path containing all of your PNGs.",
+    )
+
+    group = parser.add_argument_group("modes")
+
+    group.add_argument(
+        "-r",
+        "--random",
+        action="store_true",
+        help="Print a random PNG from directory",
+    )
+    group.add_argument(
+        "-n",
+        "--name",
+        type=str,
+        nargs=1,
+        help="Print a PNG by name from directory; do not include file-type",
+    )
+    group.add_argument(
+        "-rn",
+        "--random-name",
+        type=str,
+        nargs=1,
+        help="Print a random PNG by name from a list of names, comma-separated WITHOUT whitespace or file-types (e.g. 'image1,image2,image3')",
+    )
+
+    args = parser.parse_args()
+    return parser, args
+
+
+def handle_args(parser, args) -> None:
+    """Run the script according to the mode the user selected."""
+    if args.random:
+        print_random_image()
+    elif args.name:
+        print_image_by_name(args.name[0])
+    elif args.random_name:
+        names = args.random_name[0].split(",")
+        print_random_image_from_names(names)
+    else:
+        parser.print_help()
+
+
+def find_images() -> None:
+    """Search "pngs_path"" for all PNGs & assign them to a global variable."""
+    import os
+
+    global ALL_PNGS_FOUND_IN_PATH, PNGS_PATH
+
+    os.chdir(PNGS_PATH)
+    for filename in os.listdir("."):
+        ALL_PNGS_FOUND_IN_PATH.append(filename) if filename.endswith(".png") else None
+
+    if len(ALL_PNGS_FOUND_IN_PATH) == 0:
+        print(f"There are no PNGs located in ${PNGS_PATH}.")
+        print("Please go put some there, you dingus.")
+        sys.exit(1)
 
 
 def print_png_to_console(png: Image) -> None:
@@ -100,101 +149,61 @@ def print_png_to_console(png: Image) -> None:
 
 def print_random_image() -> None:
     """Calls `print_image_array_to_console` with a random image from the PNGs directory."""
+    import random
+
     global ALL_PNGS_FOUND_IN_PATH
+
     print_png_to_console(Image.open(random.choice(ALL_PNGS_FOUND_IN_PATH)))
 
 
-def print_image_by_name(png_name: str) -> None:
+def print_image_by_name(name: str) -> None:
     """Calls `print_image_array_to_console` with an image from the PNGs directory by filename."""
-    check_png_exists(png_name)
-    print_png_to_console(Image.open(f"{png_name}.png"))
+    global ALL_PNGS_FOUND_IN_PATH
+    check_png_exists(name)
+    print_png_to_console(Image.open(f"{name}.png"))
 
 
-def print_random_image_from_names(png_names: list[str]) -> None:
+def print_random_image_from_names(names: list[str]) -> None:
     """Calls `print_image_array_to_console` with a random image from a string list of filenames in the PNGs directory."""
+    import random
+
+    global ALL_PNGS_FOUND_IN_PATH
     # Check to see that all of these names are actually in the PNGs directory
-    global ALL_PNGS_FOUND_IN_PATH, PNGS_PATH
-    for filename in png_names:
+    for filename in names:
         check_png_exists(filename)
 
-    print_png_to_console(Image.open(f"{random.choice(png_names)}.png"))
+    print_png_to_console(Image.open(f"{random.choice(names)}.png"))
 
 
-def check_png_exists(png_filename) -> None:
-    """Checks to see if the specified PNG filename was located in the config dir. Will halt execution if it's not found."""
+def check_png_exists(name: str) -> None:
+    """Checks to see if the specified PNG was found when location was scanned."""
     global ALL_PNGS_FOUND_IN_PATH, PNGS_PATH
-    if f"{png_filename}.png" not in ALL_PNGS_FOUND_IN_PATH:
-        print(f"Dude. '{png_filename}.png' isn't in {PNGS_PATH}. Stop it.")
+    if f"{name}.png" not in ALL_PNGS_FOUND_IN_PATH:
+        print(f"'{name}.png' isn't in {PNGS_PATH}. Stop it.")
         sys.exit(1)
-
-
-def run_first_time_config() -> None:
-    """Initialize the program by creating a .config folder and a default .conf file."""
-    global CONFIG_DIR, CONFIG_FILENM
-    print(f"Performing first-time set up ...")
-    
-    Path.mkdir(CONFIG_DIR, exist_ok=True)
-    config_path = CONFIG_DIR.joinpath(CONFIG_FILENM)
-
-    DEFAULT_PNGS_LOCATION = "~/Pictures/Sprites"
-    with open(config_path, "w") as file:
-        file.write(f"[DEFAULT]\nPNGS_LOCATION = {DEFAULT_PNGS_LOCATION}\n")
-    
-    print(f"'{config_path}' has been established with default PNGs location at '{DEFAULT_PNGS_LOCATION}'.")
-    print(f"Either go put some PNGs there and run this again or change the config file to make the program look for images somewhere else!")
-    sys.exit(0)
 
 
 def main() -> None:
     """Entry point to the program."""
-    load_config()
+    # Parse the command-line arguments
+    parser, args = parse_args()
 
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        prog="png-colorscripts",
-        description="CLI utility that prints out unicode images from PNGs located in a configurable directory",
-        usage="png-colorscripts [OPTION] [NAME(S)]",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        add_help=False,
-    )
-
-    parser.add_argument(
-        "-h", "--help", action="help", help="Show this help message and exit"
-    )
-    parser.add_argument(
-        "-r",
-        "--random",
-        action="store_true",
-        help="Print a random PNG from configured directory",
-    )
-    parser.add_argument(
-        "-n",
-        "--name",
-        type=str,
-        nargs=1,
-        help="Print a PNG by name from configured directory; do not include file-type",
-    )
-    parser.add_argument(
-        "-rn",
-        "--random-name",
-        type=str,
-        nargs=1,
-        help="Print a random PNG by name from a list of names, comma-separated WITHOUT whitespace or file-types (𝓮𝓰 'image1,image_2,image-3')",
-    )
-
-    args = parser.parse_args()
-
-    if args.random:
-        print_random_image()
-    elif args.name:
-        print_image_by_name(args.name[0])
-    elif args.random_name:
-        names = args.random_name[0].split(",")
-        print_random_image_from_names(names)
-    else:
+    # If no arguments were provided, print help & quit
+    if len(sys.argv) == 1:
         parser.print_help()
+        sys.exit(1)
 
+    # Make the user-provided path globally-known
+    global PNGS_PATH
+    PNGS_PATH = args.location.expanduser()
+
+    # Find all images in said directory
+    find_images()
+
+    # Perform the rest of the script based on mode
+    handle_args(parser, args)
+
+    # Reset console color after printing the image
     reset_console_color()
 
 

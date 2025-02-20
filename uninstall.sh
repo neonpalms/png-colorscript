@@ -2,7 +2,6 @@
 
 INSTALL_DIR='/usr/local/bin'
 EXECUTABLE_NAME='png-colorscript'
-CONFIG_DIR="$HOME/.config/png-colorscript/pngs"
 
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root. Use sudo."
